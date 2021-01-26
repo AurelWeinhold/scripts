@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+############################################################################
+# This is a script to select the pulseaudio audio sink using rofi. When    #
+# selecting a new sink it will change not only default sink, but will also #
+# redirect all input-sinks to output onto the selected sink.               #
+############################################################################
+
+
+# NOTE(Aurel): As I only ever use built-in, usb and bluetooth audio sinks I only
+# replaced these. If you need Monitor Audio you will need to add this yourself
+# if you want more readable strings.
+# TODO(Aurel): For Bluetooth devices replace the MAC-Address by its human
+# readable name.
+sink=$(pacmd list-sinks | grep -e 'name:' -e 'index:'            |
+    # merge every other line into previous
+    paste -d" " - -                                              |
+    # make the strings much more read- and understandable
+    sed 's/name: <\(.*\)>/\1/g'                                  |
+    sed 's/index: //g'                                           |
+    sed 's/alsa_output\.//g'                                     |
+    sed 's/pci.*\./Internal: /g'                                 |
+    sed 's/usb-Generic_USB_Audio_.*\./USB Audio: /g'             |
+    sed 's/bluez_sink\./Bluetooth: /g'                           |
+    # user selection using rofi
+    rofi -i -dmenu -config $XDG_CONFIG_HOME/rofi/selector.rasi -p "Audio devices" -f)
+
+[[ $sink ]] || exit 0
+
+sink_index=$(echo $sink | cut -d " " -f 1)
+
+# Check that sink_index is a number. Otherwise exit.
+# NOTE(Aurel): An unfulfilled condition would mean that you either selected the
+# previous default sink which means the value in sink_index is an * (asterisk)
+# (which actually evaluates into some string as * is used for globbing) or you
+# misstyped and didn't select a proper sink.
+[[ $sink_index =~ ^[0-9]+$ ]] || exit 0
+
+# set default sink and move all input sinks to selected sink to have all sources
+# play on that sink
+pactl set-default-sink $sink_index
+pactl list short sink-inputs | cut -c1-1 - | xargs -I % pactl move-sink-input % $sink_index
