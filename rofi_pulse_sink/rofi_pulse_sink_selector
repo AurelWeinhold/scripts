@@ -12,16 +12,13 @@
 # if you want more readable strings.
 # TODO(Aurel): For Bluetooth devices replace the MAC-Address by its human
 # readable name.
-sink=$(pacmd list-sinks | grep -e 'name:' -e 'index:'            |
+sink=$(pacmd list-sinks | grep -e 'index:' -e 'device.description' |
     # merge every other line into previous
-    paste -d" " - -                                              |
+    paste -d" " - -                                                |
     # make the strings much more read- and understandable
-    sed 's/name: <\(.*\)>/\1/g'                                  |
-    sed 's/index: //g'                                           |
-    sed 's/alsa_output\.//g'                                     |
-    sed 's/pci.*\./Internal: /g'                                 |
-    sed 's/usb-Generic_USB_Audio_.*\./USB Audio: /g'             |
-    sed 's/bluez_sink\./Bluetooth: /g'                           |
+    sed 's/name: <\(.*\)>/\1/g'                                    |
+    sed 's/index: //g'                                             |
+    sed 's/device.description = "\(.*\)"/\1/g'                     |
     # user selection using rofi
     rofi -i -dmenu -config $XDG_CONFIG_HOME/rofi/selector.rasi -p "Audio devices" -f)
 
